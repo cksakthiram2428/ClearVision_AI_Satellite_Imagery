@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+torch
+torchvision
+rasterio
+opencv-python-headless
+numpy
+albumentations
+scikit-image
+tqdm
+celery
+redis
+python-multipart
+pyyaml
+tensorboard
+slowapi
+python-dotenv

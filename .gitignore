@@ -1,0 +1,26 @@
+# Node modules
+node_modules/
+dist/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+
+# Environment variables
+.env
+.env.local
+
+# IDEs
+.vscode/
+.idea/
+
+# General
+.DS_Store
+storage/uploads/
+storage/outputs/
+project/backend/storage/
