@@ -61,26 +61,25 @@ The platform provides an end-to-end pipeline: from uploading cloudy GeoTIFF imag
 ### System Overview
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                   React Frontend                     │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
-│  │   Hero   │ │  Upload  │ │ History  │ │  Docs  │ │
-│  │ Section  │ │  Panel   │ │  Panel   │ │ Panel  │ │
-│  └──────────┘ └──────────┘ └──────────┘ └────────┘ │
-└────────────────────────┬────────────────────────────┘
-                         │ REST API (HTTP)
-┌────────────────────────▼────────────────────────────┐
-│                  FastAPI Backend                     │
-│  ┌──────────┐ ┌──────────┐ ┌──────────────────────┐ │
-│  │  Routes  │ │  Config  │ │   ML Model Inference │ │
-│  │  /upload │ │  .env    │ │   (PyTorch + GDAL)   │ │
-│  └──────────┘ └──────────┘ └──────────────────────┘ │
-└────────────────────────┬────────────────────────────┘
-                         │ Task Queue
-┌────────────────────────▼────────────────────────────┐
-│              Celery + Redis Workers                   │
-│        Background processing of GeoTIFF images       │
-└──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                      React Frontend                           │
+│  ┌────────┐ ┌────────┐ ┌─────────┐ ┌────────┐ ┌──────────┐  │
+│  │  Hero  │ │ Upload │ │ History │ │  Docs  │ │ Profile  │  │
+│  │Section │ │ Panel  │ │  Panel  │ │ Panel  │ │  Panel   │  │
+│  └────────┘ └────────┘ └─────────┘ └────────┘ └──────────┘  │
+└──────────────────────────────┬───────────────────────────────┘
+                              │ REST API (HTTP)
+┌─────────────────────────────▼──────────────────────────────┐
+│                     FastAPI Backend                         │
+│  ┌─────────────────────┐  ┌──────────┐  ┌───────────────┐  │
+│  │ Auth Routes         │  │  Config  │  │  ML Inference │  │
+│  │ /register  /login   │  │  .env    │  │  PyTorch+GDAL │  │
+│  │ /upload    /jobs    │  │          │  │               │  │
+│  └─────────────────────┘  └──────────┘  └───────────────┘  │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │  SQLite DB (SQLAlchemy) — users + jobs persistence  │    │
+│  └─────────────────────────────────────────────────────┘    │
+└────────────────────────────────────────────────────────────┘
 ```
 
 ### Deep Learning Pipeline
@@ -116,12 +115,18 @@ ClearVision_AI_Satellite_Imagery/
 │   └── frontend/
 │       ├── src/
 │       │   ├── components/
-│       │   │   ├── Hero.tsx         # Main hero section with video background
-│       │   │   ├── UploadPanel.tsx   # GeoTIFF upload slide-in panel
-│       │   │   ├── HistoryPanel.tsx  # Process history viewer
-│       │   │   ├── DocsPanel.tsx     # Project documentation panel
+│       │   │   ├── Hero.tsx           # Main hero section with video background
+│       │   │   ├── UploadPanel.tsx    # GeoTIFF upload slide-in panel
+│       │   │   ├── HistoryPanel.tsx   # Process history viewer
+│       │   │   ├── DocsPanel.tsx      # Project documentation panel
+│       │   │   ├── ProfilePanel.tsx   # Profile & account settings panel
+│       │   │   ├── LoadingScreen.tsx  # Animated loading screen
 │       │   │   ├── AnimatedHeading.tsx # Animated text component
-│       │   │   └── FadeIn.tsx       # Fade-in animation wrapper
+│       │   │   └── FadeIn.tsx         # Fade-in animation wrapper
+│       │   ├── context/
+│       │   │   └── AuthContext.tsx    # Auth state + profile context
+│       │   ├── pages/
+│       │   │   └── LoginPage.tsx      # Login & register page
 │       │   ├── App.tsx
 │       │   └── index.css
 │       ├── public/
@@ -144,7 +149,7 @@ ClearVision_AI_Satellite_Imagery/
 |------------|---------|
 | Python | 3.9+ |
 | Node.js | 18+ |
-| Redis | Latest (for Celery background tasks) |
+| Redis | Latest (optional — for Celery background tasks) |
 | CUDA (optional) | 11.8+ (for GPU-accelerated inference) |
 
 ### Backend Setup
@@ -164,14 +169,13 @@ pip install -r requirements.txt
 # 4. Configure environment variables
 cp .env.example .env
 # Edit .env with your settings:
-#   CELERY_BROKER_URL=redis://localhost:6379/0
 #   UPLOAD_DIR=storage/uploads
 #   OUTPUT_DIR=storage/outputs
 #   MAX_FILE_SIZE_MB=50
+#   DB_PATH=sqlite:///./database/isro_cloud.db  (SQLite — no extra setup)
 
-# 5. Start the FastAPI server
-cd ..
-uvicorn backend.app:app --host 0.0.0.0 --port 8000
+# 5. Start the FastAPI server (SQLite DB is created automatically)
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 The API will be available at `http://localhost:8000`. Interactive API docs at `http://localhost:8000/docs`.
@@ -195,13 +199,17 @@ The UI will be accessible at `http://localhost:5173`.
 
 ## 📖 Usage
 
-1. **Open** the frontend at `http://localhost:5173`
-2. **Click** "New Process" to open the upload panel
-3. **Drag & drop** or browse for a LISS-IV GeoTIFF satellite image (`.tif` / `.tiff`)
-4. **Select tags** to categorize your image (Urban, Forest, Agriculture, etc.)
-5. **Click** "Upload & Process" to submit the image for cloud removal
-6. **View results** — the processed cloud-free image and quality metrics will be displayed
-7. **Track history** — all processed images are saved in the Process History panel
+### Demo Login
+> **Email:** `admin@clearvision.ai` · **Password:** `clearvision2026`
+
+1. **Open** the frontend at `http://localhost:5173` — you will be redirected to the login page
+2. **Sign in** with the demo credentials above (or create an account via the register form)
+3. **Click** "New Process" to open the upload panel
+4. **Drag & drop** or browse for a LISS-IV GeoTIFF satellite image (`.tif` / `.tiff`)
+5. **Select tags** to categorize your image (Urban, Forest, Agriculture, etc.)
+6. **Upload** the image — a Job ID is returned and saved to Process History
+7. **Click the profile avatar** (top-right) to open the Profile & Account Settings panel
+8. **Sign out** from the profile panel or navigate to the History panel to review past jobs
 
 ---
 
@@ -247,8 +255,9 @@ The model combines the strengths of two deep learning paradigms:
 
 ### Backend
 - **FastAPI** — High-performance async Python web framework
-- **Celery** — Distributed task queue for background processing
-- **Redis** — Message broker for Celery workers
+- **SQLAlchemy + SQLite** — Database ORM for users and job persistence
+- **Passlib (bcrypt)** — Secure password hashing for auth
+- **Celery + Redis** — Optional distributed task queue for background processing
 - **PyTorch** — Deep learning model training and inference
 - **GDAL / Rasterio** — Geospatial data processing
 - **OpenCV** — Image processing utilities

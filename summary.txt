@@ -1,0 +1,642 @@
+================================================================================
+                    CLEARVISION AI SATELLITE IMAGERY
+                         COMPLETE PROJECT SUMMARY
+================================================================================
+
+WHAT IS THIS PROJECT?
+---------------------
+ClearVision AI is a web application that removes cloud cover from satellite
+images. It is built for ISRO Challenge 2 and works with LISS-IV GeoTIFF
+files (.tif / .tiff format).
+
+In simple terms:
+  1. A user uploads a cloudy satellite image through a website.
+  2. The backend saves the file and gives back a unique Job ID.
+  3. A machine learning model processes the image to remove clouds.
+  4. The user gets a clean image plus quality scores (PSNR, SSIM, SAM).
+
+The project has two main parts:
+  - FRONTEND  = The website users see and interact with (React)
+  - BACKEND   = The server that receives files and runs AI (Python/FastAPI)
+
+
+================================================================================
+                         HIGH-LEVEL ARCHITECTURE
+================================================================================
+
+    [ USER BROWSER ]
+          |
+          |  Upload GeoTIFF file
+          v
+    [ REACT FRONTEND ]  ------>  Port 5173 (development)
+          |
+          |  HTTP requests (POST /upload, etc.)
+          v
+    [ FASTAPI BACKEND ]   ------>  Port 8000
+          |
+          +----> Saves files to storage/uploads/
+          |
+          +----> (Planned) Sends job to Celery worker via Redis
+          |
+          +----> (Planned) ML model removes clouds
+          |
+          +----> Saves result to storage/outputs/
+          |
+          v
+    [ USER GETS ]  Job ID, processed image, metrics
+
+
+================================================================================
+                         PROJECT FOLDER STRUCTURE
+================================================================================
+
+ClearVision_AI_Satellite_Imagery/
+|
+|-- README.md                 Setup instructions for developers
+|-- summary.txt               This file - full project explanation
+|-- .gitignore                Files to ignore in Git (secrets, uploads, etc.)
+|
++-- project/
+    |
+    |-- backend/              PYTHON SERVER + MACHINE LEARNING
+    |   |
+    |   |-- app.py            Main API server (all HTTP routes live here)
+    |   |-- requirements.txt  List of Python packages to install
+    |   |-- .env.example      Template for environment settings
+    |   |
+    |   |-- config/
+    |   |   +-- config.yaml   Training settings (epochs, learning rate, etc.)
+    |   |
+    |   |-- models/           Neural network definitions
+    |   |   |-- generator.py       Attention U-Net (creates clear image)
+    |   |   |-- discriminator.py   PatchGAN (checks if output looks real)
+    |   |   +-- fusion_module.py   Combines multiple input data types
+    |   |
+    |   |-- datasets/
+    |   |   +-- liss_dataset.py    Loads satellite images for training
+    |   |
+    |   |-- training/
+    |   |   +-- train.py           Script to train the AI models
+    |   |
+    |   |-- utils/              Helper tools
+    |   |   |-- geotiff_utils.py   Read and write GeoTIFF files
+    |   |   |-- preprocessing.py     Normalize images, create cloud masks
+    |   |   |-- metrics.py           Calculate PSNR, SSIM, SAM scores
+    |   |   +-- create_dummy_tif.py  Create a tiny test GeoTIFF file
+    |   |
+    |   +-- storage/          Runtime folders (not in Git)
+    |       |-- uploads/        Where uploaded images are saved
+    |       +-- outputs/        Where processed images are saved
+    |
+    +-- frontend/             REACT WEBSITE
+        |
+        |-- package.json        Node.js dependencies and scripts
+        |-- vite.config.ts      Build tool configuration
+        |-- tailwind.config.js  CSS styling framework config
+        |-- index.html          Main HTML page
+        |
+        +-- src/
+            |-- main.tsx            Starts the React app
+            |-- App.tsx             Root component (wraps Hero page)
+            |-- index.css           Global styles + glass effect
+            |
+            +-- components/
+                |-- Hero.tsx            Main page with upload button
+                |-- AnimatedHeading.tsx Typing-style title animation
+                +-- FadeIn.tsx          Smooth fade-in animation
+
+
+================================================================================
+                              FRONTEND DETAILS
+================================================================================
+
+PURPOSE
+-------
+The frontend is a single-page website where users upload satellite images.
+It is modern, dark-themed, and animated.
+
+TECHNOLOGIES USED
+-----------------
+  React 19        - JavaScript library for building user interfaces
+  TypeScript      - Typed JavaScript (catches errors before running)
+  Vite 8          - Fast development server and build tool
+  Tailwind CSS 4  - Utility CSS for styling (responsive, dark theme)
+
+WHY THESE WERE CHOSEN
+---------------------
+  React      : Most popular UI library; easy to split page into components
+  TypeScript : Safer code when handling file uploads and API responses
+  Vite       : Very fast reload during development (good for hackathons)
+  Tailwind   : Quick styling without writing lots of custom CSS
+
+MAIN COMPONENTS
+---------------
+
+1. App.tsx
+   - Root of the app. Renders Hero on a black full-screen background.
+
+2. Hero.tsx (MOST IMPORTANT)
+   - Full landing page with:
+     * Background video (satellite/cloud theme)
+     * Navigation bar with "VEX" branding
+     * Title: "ISRO Cloud Removal - Clear satellite imagery."
+     * Hidden file input (accepts only .tif and .tiff)
+     * "Upload GeoTIFF" button
+     * "Process Image" button (appears after successful upload)
+   - When user picks a file:
+     * Builds FormData with the file
+     * Sends POST request to http://127.0.0.1:8000/upload
+     * Stores returned job_id in React state
+     * Shows green success message with Job ID
+   - "Process Image" currently only shows an alert (NOT yet connected to API)
+
+3. AnimatedHeading.tsx
+   - Animates title text character by character (slide + fade in)
+
+4. FadeIn.tsx
+   - Wraps content and fades it in after a delay
+
+STYLING
+-------
+  - Black background, white text
+  - "liquid-glass" effect: frosted glass look with blur and gradient border
+  - Responsive layout for mobile, tablet, and desktop
+
+HOW TO RUN FRONTEND
+-------------------
+  cd project/frontend
+  npm install
+  npm run dev
+  Open browser: http://localhost:5173
+
+
+================================================================================
+                              BACKEND DETAILS
+================================================================================
+
+PURPOSE
+-------
+The backend is a REST API that:
+  - Accepts GeoTIFF uploads
+  - Assigns a unique Job ID to each upload
+  - (Planned) Runs cloud-removal AI in the background
+  - (Planned) Returns processed images and quality metrics
+
+TECHNOLOGIES USED
+-----------------
+  Python 3.9+         - Main backend language
+  FastAPI             - Web framework for building APIs
+  Uvicorn             - Server that runs FastAPI
+  Celery              - Background task queue (for long ML jobs)
+  Redis               - Message broker for Celery
+  PyTorch             - Deep learning framework
+  rasterio            - Read/write GeoTIFF satellite files
+  slowapi             - Rate limiting (prevent abuse)
+  python-dotenv       - Load settings from .env file
+
+WHY THESE WERE CHOSEN
+---------------------
+  Python + FastAPI : Best combo for ML + API in one project; fast and async
+  PyTorch          : Flexible for custom GAN models (Generator, Discriminator)
+  rasterio         : Standard tool for satellite/geospatial TIFF files
+  Celery + Redis   : ML inference can take minutes; must not block the website
+  slowapi          : Limits uploads so one user cannot overload the server
+
+ENVIRONMENT VARIABLES (.env)
+----------------------------
+  CELERY_BROKER_URL=redis://localhost:6379/0
+  UPLOAD_DIR=storage/uploads
+  OUTPUT_DIR=storage/outputs
+  MAX_FILE_SIZE_MB=50
+  DB_PATH=sqlite:///./database/isro_cloud.db   (planned, not used yet)
+
+HOW TO RUN BACKEND
+------------------
+  cd project/backend
+  pip install -r requirements.txt
+  cd ..
+  uvicorn backend.app:app --host 0.0.0.0 --port 8000
+  API docs: http://localhost:8000/docs
+
+
+================================================================================
+                           API ENDPOINTS (ROUTES)
+================================================================================
+
+All routes are defined in backend/app.py.
+
+1. GET /
+   Purpose  : Health check - confirms API is running
+   Response : { "message": "ISRO Challenge 2 API Running" }
+   Status   : WORKING
+
+2. POST /upload
+   Purpose  : Receive uploaded GeoTIFF file
+   Input    : multipart/form-data with "file" field
+   Rules    :
+     - Only .tif or .tiff files allowed
+     - Max size: 50 MB (configurable)
+     - Rate limit: 5 uploads per 15 minutes per IP address
+     - Filename is sanitized (security)
+   Process  :
+     - Generate UUID as job_id
+     - Save file as: storage/uploads/{job_id}_{filename}
+   Response : { "job_id": "...", "status": "uploaded", "filename": "..." }
+   Status   : WORKING (fully connected to frontend)
+
+3. POST /predict/{job_id}
+   Purpose  : Start cloud removal processing for a job
+   Process  : Should enqueue Celery task "process_image"
+   Response : { "job_id": "...", "status": "completed" }
+   Status   : PLACEHOLDER ONLY (returns completed immediately, no real ML)
+
+4. GET /result/{job_id}
+   Purpose  : Check if processing is done and get output info
+   Response : { "job_id": "...", "status": "completed" }
+   Status   : PLACEHOLDER (always says completed)
+
+5. GET /metrics/{job_id}
+   Purpose  : Return image quality scores after processing
+   Response : { "job_id": "...", "psnr": 32.5, "ssim": 0.91, "sam": 0.04 }
+   Status   : PLACEHOLDER (returns hardcoded fake numbers)
+
+
+================================================================================
+                    REQUEST FLOW (STEP BY STEP)
+================================================================================
+
+WHAT WORKS TODAY
+----------------
+
+Step 1: User opens http://localhost:5173
+Step 2: User clicks "Upload GeoTIFF" and selects a .tif file
+Step 3: Frontend sends POST /upload with the file
+Step 4: Backend validates file type and size
+Step 5: Backend saves file and creates job_id (UUID)
+Step 6: Backend returns job_id to frontend
+Step 7: Frontend shows "Success! Job ID: xxxxx"
+Step 8: "Process Image" button appears
+Step 9: Clicking "Process Image" only shows an alert (not connected yet)
+
+WHAT IS PLANNED (FULL FLOW)
+---------------------------
+
+Step 1-7: Same as above
+Step 8: User clicks "Process Image"
+Step 9: Frontend calls POST /predict/{job_id}
+Step 10: Backend sends job to Celery worker (via Redis)
+Step 11: Celery worker reads GeoTIFF from storage/uploads/
+Step 12: Worker runs FusionModule + Generator (AI inference)
+Step 13: Worker writes result to storage/outputs/{job_id}_processed.tif
+Step 14: Frontend polls GET /result/{job_id} until status = completed
+Step 15: Frontend calls GET /metrics/{job_id} for PSNR, SSIM, SAM
+Step 16: User downloads or views the clear satellite image
+
+
+================================================================================
+                         MACHINE LEARNING DETAILS
+================================================================================
+
+PROBLEM BEING SOLVED
+--------------------
+Satellite images from LISS-IV often have clouds blocking the ground.
+The AI learns to reconstruct what the ground looks like without clouds.
+
+APPROACH: CONDITIONAL GAN (Generative Adversarial Network)
+----------------------------------------------------------
+Two networks train together:
+  - GENERATOR     : Creates the cloud-free image
+  - DISCRIMINATOR : Judges if the output looks realistic
+
+This produces sharper, more realistic results than simple copy/paste or
+blur-removal methods.
+
+MODEL 1: FUSION MODULE (fusion_module.py)
+-------------------------------------------
+Purpose: Combine different types of input data into one tensor.
+
+Inputs (9 channels total):
+  - Cloudy LISS-IV image     (3 channels - RGB-like bands)
+  - Sentinel-1 SAR radar     (2 channels - sees through clouds)
+  - Temporal reference image (3 channels - older clear photo of same area)
+  - Cloud mask               (1 channel - marks where clouds are)
+
+Output: 3-channel fused image fed into the Generator.
+
+MODEL 2: GENERATOR (generator.py)
+---------------------------------
+Architecture: Attention U-Net
+
+Structure:
+  ENCODER (downsampling):
+    Conv block 64  -> MaxPool
+    Conv block 128 -> MaxPool
+    Conv block 256 -> MaxPool
+    Conv block 512
+
+  DECODER (upsampling with skip connections):
+    UpConv + Attention + Concat + Conv (512 -> 256)
+    UpConv + Attention + Concat + Conv (256 -> 128)
+    UpConv + Attention + Concat + Conv (128 -> 64)
+    Final 1x1 conv -> 3 channels
+    Sigmoid activation -> values between 0 and 1
+
+Why Attention U-Net?
+  - U-Net preserves spatial detail via skip connections
+  - Attention blocks focus on cloudy regions specifically
+  - Good for image-to-image tasks like inpainting / cloud removal
+
+MODEL 3: DISCRIMINATOR (discriminator.py)
+-----------------------------------------
+Architecture: PatchGAN
+
+Input: 6 channels (generated or real image + fused input concatenated)
+Output: Patch-wise real/fake score map
+
+Purpose during training:
+  - Push Generator to produce realistic textures, not blurry averages
+
+TRAINING PIPELINE (training/train.py)
+-------------------------------------
+Config from config/config.yaml:
+  batch_size: 8
+  learning_rate: 0.0001
+  epochs: 100
+  patch_size: 256
+  checkpoint_dir: checkpoints/
+
+Loss functions:
+  - GAN loss (BCE)           : Fool the discriminator
+  - L1 loss (weight 100)     : Pixel accuracy vs ground truth
+  - Perceptual loss (VGG16)  : Visual similarity (weight 10)
+
+Optimizers: Adam (lr=0.0001, beta1=0.5)
+
+Each training step:
+  1. Load batch from LISSDataset
+  2. FusionModule combines inputs
+  3. Generator creates fake clear image
+  4. Update Generator (minimize GAN + L1 + perceptual loss)
+  5. Update Discriminator (distinguish real vs fake)
+  6. Log losses to TensorBoard
+  7. Save model weights to checkpoints/ each epoch
+
+DATASET (datasets/liss_dataset.py)
+----------------------------------
+Expects folders:
+  ../data/cloudy/   - Cloudy LISS-IV GeoTIFFs
+  ../data/clear/    - Matching clear (ground truth) GeoTIFFs
+  ../data/sar/      - Optional SAR data
+  ../data/temporal/ - Optional previous clear images
+
+For each image pair:
+  1. Read GeoTIFF with rasterio
+  2. Normalize pixel values to [0, 1]
+  3. Generate cloud mask (bright pixels = cloud)
+  4. Apply augmentations: random crop 256x256, flips, rotation
+  5. Return PyTorch tensors
+
+IMAGE UTILITIES
+---------------
+
+geotiff_utils.py:
+  - read_geotiff(path)   -> returns numpy array + metadata profile
+  - write_geotiff(path)  -> saves array preserving geospatial info (CRS, etc.)
+  - extract_patch()      -> read a window from a large TIFF
+
+preprocessing.py:
+  - normalize_image()      -> scale each band to [0, 1]
+  - generate_cloud_mask()  -> threshold bright areas as clouds
+  - extract_bands()        -> pick specific spectral bands
+
+metrics.py:
+  - calculate_psnr()  -> Peak Signal-to-Noise Ratio (higher = better)
+  - calculate_ssim()  -> Structural Similarity (closer to 1 = better)
+  - calculate_sam()   -> Spectral Angle Mapper (lower = better for satellites)
+  - PerceptualLoss    -> VGG-based loss used during training
+
+
+================================================================================
+                         EVALUATION METRICS EXPLAINED
+================================================================================
+
+PSNR (Peak Signal-to-Noise Ratio)
+  - Measures pixel-level difference between output and ground truth
+  - Higher value = better (typical good range: 30+ dB)
+  - Simple and widely used
+
+SSIM (Structural Similarity Index)
+  - Measures structural patterns (edges, shapes, textures)
+  - Range: 0 to 1 (1 = identical structure)
+  - Better reflects human perception than PSNR alone
+
+SAM (Spectral Angle Mapper)
+  - Compares spectral signatures of pixels (important for multispectral data)
+  - Lower angle = spectra match better
+  - Critical for satellite imagery where material identification matters
+
+
+================================================================================
+                              DATABASE & STORAGE
+================================================================================
+
+CURRENT STORAGE (FILE SYSTEM ONLY)
+----------------------------------
+  storage/uploads/  - Raw uploaded GeoTIFFs named {job_id}_{filename}
+  storage/outputs/  - Processed results named {job_id}_processed.tif
+  checkpoints/      - Saved model weights (.pth files) from training
+  logs/train/       - TensorBoard training logs
+
+DATABASE (PLANNED, NOT IMPLEMENTED)
+-----------------------------------
+  SQLite at database/isro_cloud.db (mentioned in .env.example only)
+  Would store: job_id, status, timestamps, metrics, file paths
+  Currently: job tracking is done only by filename prefix (job_id)
+
+NO traditional database is active in the current code.
+
+
+================================================================================
+                         SECURITY FEATURES
+================================================================================
+
+  CORS              - Only localhost:5173 can call the API
+  Rate limiting     - Max 5 uploads per 15 minutes per IP
+  File type check   - Only .tif and .tiff accepted
+  File size limit   - Max 50 MB per upload
+  Filename sanitize - Removes dangerous characters from uploaded names
+  .env gitignored   - Secrets and paths not committed to Git
+  storage/ ignored  - User uploads not committed to Git
+
+
+================================================================================
+                    COMPLETE TECHNOLOGY LIST
+================================================================================
+
+LANGUAGES
+  Python 3.9+    - Backend, ML, GeoTIFF processing
+  TypeScript     - Frontend logic
+  YAML           - Training configuration
+  CSS            - Styling (via Tailwind)
+
+BACKEND PACKAGES (requirements.txt)
+  fastapi                 - API framework
+  uvicorn[standard]       - ASGI server
+  torch                   - Deep learning
+  torchvision             - Pre-trained models (VGG for perceptual loss)
+  rasterio                - GeoTIFF I/O
+  opencv-python-headless  - Image processing
+  numpy                   - Numerical arrays
+  albumentations          - Data augmentation
+  scikit-image            - PSNR, SSIM metrics
+  tqdm                    - Progress bars during training
+  celery                  - Background tasks
+  redis                   - Celery message broker
+  python-multipart        - File upload support in FastAPI
+  pyyaml                  - Read config.yaml
+  tensorboard             - Training visualization
+  slowapi                 - Rate limiting
+  python-dotenv           - Environment variables
+
+FRONTEND PACKAGES (package.json)
+  react, react-dom        - UI framework
+  vite                    - Build tool
+  typescript              - Type checking
+  tailwindcss             - CSS utilities
+  eslint                  - Code quality
+  @vitejs/plugin-react    - React support in Vite
+
+
+================================================================================
+              WHY EACH TECHNOLOGY WAS CHOSEN (COMPARISON)
+================================================================================
+
+BACKEND FRAMEWORK
+  FastAPI chosen over Flask    -> Native async, auto API docs, faster
+  FastAPI chosen over Django   -> Lighter; no need for full web app features
+  Python chosen over Node.js   -> ML libraries only exist properly in Python
+
+ML FRAMEWORK
+  PyTorch chosen over TensorFlow -> Easier custom model code (GAN, Attention)
+  PyTorch chosen over JAX        -> Bigger community, torchvision for VGG loss
+
+GEOTIFF HANDLING
+  rasterio chosen over PIL/Pillow -> Keeps map coordinates and band metadata
+  rasterio chosen over raw GDAL   -> Clean Python API with NumPy arrays
+
+FRONTEND
+  React chosen over Vue/Svelte   -> Largest ecosystem, team familiarity
+  Vite chosen over Create React App -> Much faster dev server
+  Tailwind chosen over Bootstrap -> Easier custom dark/glass design
+
+BACKGROUND JOBS
+  Celery chosen over FastAPI BackgroundTasks -> ML takes too long for in-process
+  Redis chosen as broker         -> Standard, fast, simple setup
+
+STYLING
+  Tailwind chosen over plain CSS -> Faster hackathon UI development
+
+
+================================================================================
+                    WHAT IS COMPLETE vs WHAT IS PENDING
+================================================================================
+
+COMPLETE (WORKING)
+  [x] React frontend with animations and upload UI
+  [x] GeoTIFF file upload to backend
+  [x] Job ID generation and file storage
+  [x] API validation (file type, size, rate limit)
+  [x] ML model code (Generator, Discriminator, FusionModule)
+  [x] Training script with GAN + L1 + perceptual loss
+  [x] Dataset loader with augmentations
+  [x] GeoTIFF read/write utilities
+  [x] Metric calculation functions (PSNR, SSIM, SAM)
+  [x] CORS and security basics
+
+PARTIALLY DONE (PLACEHOLDER / STUB)
+  [~] POST /predict - returns fake "completed" without running ML
+  [~] GET /result   - always returns completed
+  [~] GET /metrics  - returns hardcoded numbers (32.5, 0.91, 0.04)
+  [~] Celery task process_image - code exists but API does not call it
+  [~] "Process Image" button - shows alert only, no API call
+
+NOT YET IMPLEMENTED
+  [ ] Connect trained model weights to inference in API
+  [ ] Wire Celery + Redis for real background processing
+  [ ] Frontend polling for job status
+  [ ] Frontend display of metrics and download of result
+  [ ] SQLite database for job history
+  [ ] End-to-end test with real LISS-IV data
+
+
+================================================================================
+                         HOW TO RUN THE FULL PROJECT
+================================================================================
+
+PREREQUISITES
+  - Python 3.9 or higher
+  - Node.js 18 or higher
+  - Redis (optional, needed only for full Celery background jobs)
+  - GPU recommended for training (CPU works for API and testing)
+
+STEP 1: BACKEND
+  cd ClearVision_AI_Satellite_Imagery/project/backend
+  pip install -r requirements.txt
+  Copy .env.example to .env and adjust if needed
+  cd ..
+  uvicorn backend.app:app --host 0.0.0.0 --port 8000
+
+STEP 2: FRONTEND (separate terminal)
+  cd ClearVision_AI_Satellite_Imagery/project/frontend
+  npm install
+  npm run dev
+
+STEP 3: OPTIONAL - REDIS + CELERY (for full async processing)
+  redis-server
+  celery -A backend.app:celery_app worker --loglevel=info
+
+STEP 4: USE THE APP
+  Open http://localhost:5173
+  Upload a .tif or .tiff file
+  Note the Job ID shown on screen
+
+STEP 5: TRAINING (separate, needs data)
+  Place cloudy/clear GeoTIFF pairs in project/data/cloudy and project/data/clear
+  cd project/backend
+  python training/train.py
+
+
+================================================================================
+                         ONE-PARAGRAPH ELEVATOR PITCH
+================================================================================
+
+ClearVision AI is an ISRO-focused satellite imagery platform that lets users
+upload cloudy LISS-IV GeoTIFF images through a modern React website and
+receive AI-generated cloud-free versions. The backend uses FastAPI for fast
+file handling, Celery and Redis for background ML jobs, and a PyTorch GAN
+with Attention U-Net and multi-modal fusion (optical + SAR + temporal +
+cloud mask) to reconstruct clear imagery. Quality is measured with PSNR,
+SSIM, and SAM metrics. The frontend is built with React, TypeScript, Vite,
+and Tailwind CSS. Upload works end-to-end today; full ML inference pipeline
+integration is the main remaining step.
+
+
+================================================================================
+                              KEY FILE REFERENCE
+================================================================================
+
+  backend/app.py              -> All API routes and Celery task
+  backend/models/generator.py -> Main AI model (Attention U-Net)
+  backend/training/train.py   -> How to train the models
+  backend/datasets/liss_dataset.py -> How training data is loaded
+  frontend/src/components/Hero.tsx -> Main user interface and upload logic
+  backend/config/config.yaml  -> Training hyperparameters
+  backend/requirements.txt    -> Python dependencies
+  frontend/package.json       -> Node.js dependencies
+
+
+================================================================================
+                           END OF PROJECT SUMMARY
+================================================================================
+Generated for: ClearVision AI Satellite Imagery (ISRO Challenge 2)
+Repository path: ClearVision_AI_Satellite_Imagery/

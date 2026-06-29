@@ -15,3 +15,7 @@ pyyaml
 tensorboard
 slowapi
 python-dotenv
+sqlalchemy
+passlib[bcrypt]
+pydantic[email]
+email-validator
