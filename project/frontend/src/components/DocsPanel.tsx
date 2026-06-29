@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface DocsPanelProps {
   onClose: () => void;
@@ -7,18 +7,18 @@ interface DocsPanelProps {
 const DocsPanel: React.FC<DocsPanelProps> = ({ onClose }) => {
   const [isClosing, setIsClosing] = useState(false);
 
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(onClose, 300);
+  }, [onClose]);
+
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleClose();
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, []);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(onClose, 300);
-  };
+  }, [handleClose]);
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end font-sans">
@@ -27,7 +27,7 @@ const DocsPanel: React.FC<DocsPanelProps> = ({ onClose }) => {
       {/* Left backdrop clickable area */}
       <div
         className={`absolute inset-0 z-10 transition-opacity duration-500 ease-out ${isClosing ? 'opacity-0' : 'opacity-100'}`}
-        style={{ background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(8px)' }}
+        style={{ background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(8px)' }}
         onClick={handleClose}
       />
 

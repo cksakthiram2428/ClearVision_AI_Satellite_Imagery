@@ -19,8 +19,13 @@ venv/
 .vscode/
 .idea/
 
+# Logs
+*.log
+*.err.log
+
 # General
 .DS_Store
+storage/
 storage/uploads/
 storage/outputs/
 project/backend/storage/

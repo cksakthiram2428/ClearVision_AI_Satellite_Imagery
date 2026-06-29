@@ -1,33 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AnimatedHeading from './AnimatedHeading';
 import FadeIn from './FadeIn';
 import HistoryPanel, { type JobHistoryItem } from './HistoryPanel';
 import UploadPanel from './UploadPanel';
 import DocsPanel from './DocsPanel';
+import { useAuth } from '../context/AuthContext';
 
-const Hero: React.FC = () => {
+interface HeroProps {
+}
+
+function loadJobHistory(): JobHistoryItem[] {
+  const saved = localStorage.getItem('isro_job_history');
+  if (!saved) return [];
+  try {
+    return JSON.parse(saved) as JobHistoryItem[];
+  } catch (e) {
+    console.error('Failed to parse history', e);
+    return [];
+  }
+}
+
+const Hero: React.FC<HeroProps> = () => {
+  const { logout } = useAuth();
   const [jobId, setJobId] = useState<string | null>(null);
 
   // Panels state
-  const [jobHistory, setJobHistory] = useState<JobHistoryItem[]>([]);
+  const [jobHistory, setJobHistory] = useState<JobHistoryItem[]>(loadJobHistory);
   const [showHistory, setShowHistory] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Compute if any panel is open for blur effect
   const isAnyPanelOpen = showUpload || showDocs || showHistory;
-
-  // Load history on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('isro_job_history');
-    if (saved) {
-      try {
-        setJobHistory(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse history', e);
-      }
-    }
-  }, []);
 
   const handleUploadSuccess = (newJobId: string, tags: string[], filename: string) => {
     setJobId(newJobId);
@@ -64,7 +69,7 @@ const Hero: React.FC = () => {
           {/* Navbar Wrapper */}
           <div className="px-6 md:px-12 lg:px-16 pt-6">
             <nav className="liquid-glass rounded-xl px-4 py-2 flex items-center justify-between">
-              <div className="text-2xl font-semibold tracking-tight">ClearVision AI</div>
+              <div className="text-2xl font-semibold tracking-tight">GeoSynth AI</div>
               <div className="hidden md:flex items-center gap-8 text-sm">
                 <a href="#features" className="transition-colors hover:text-gray-300">Features</a>
                 <a href="#technology" className="transition-colors hover:text-gray-300">Technology</a>
@@ -77,13 +82,46 @@ const Hero: React.FC = () => {
                   View History
                 </button>
               </div>
-              <button
-                onClick={() => setShowHistory(true)}
-                className="bg-white text-black px-6 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-100 md:hidden"
-              >
-                History
-              </button>
+              <div className="flex items-center gap-2 md:hidden">
+                <button
+                  onClick={() => logout()}
+                  className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm font-medium text-rose-200 transition hover:bg-rose-500/20"
+                >
+                  Logout
+                </button>
+                <button
+                  onClick={() => setMobileMenuOpen((value) => !value)}
+                  className="rounded-lg border border-white/15 bg-white/10 p-2 text-white transition hover:bg-white/20"
+                  aria-label="Toggle navigation"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </button>
+                <button
+                  onClick={() => setShowHistory(true)}
+                  className="bg-white text-black px-6 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-gray-100"
+                >
+                  History
+                </button>
+              </div>
             </nav>
+            {mobileMenuOpen ? (
+              <div className="mt-3 rounded-2xl border border-white/10 bg-black/40 p-3 backdrop-blur-xl md:hidden">
+                <div className="flex flex-col gap-2 text-sm text-gray-200">
+                  <a href="#features" className="rounded-xl px-3 py-2 transition hover:bg-white/10" onClick={() => setMobileMenuOpen(false)}>Features</a>
+                  <a href="#technology" className="rounded-xl px-3 py-2 transition hover:bg-white/10" onClick={() => setMobileMenuOpen(false)}>Technology</a>
+                  <a href="#about" className="rounded-xl px-3 py-2 transition hover:bg-white/10" onClick={() => setMobileMenuOpen(false)}>About Model</a>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false)
+                      setShowHistory(true)
+                    }}
+                    className="rounded-xl px-3 py-2 text-left transition hover:bg-white/10"
+                  >
+                    View History
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           {/* Hero Content Wrapper */}
@@ -93,7 +131,7 @@ const Hero: React.FC = () => {
               {/* Left Column */}
               <div className="pointer-events-auto">
                 <AnimatedHeading
-                  text={"Generative AI-Based\nCloud Removal for \nLISS–IV Satellite Imagery"}
+                  text={"Generative AI-Based\nCloud Removal for \nLISS–IV Satellite\nImagery"}
                   className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-normal mb-4"
                   style={{ letterSpacing: '-0.04em' }}
                 />

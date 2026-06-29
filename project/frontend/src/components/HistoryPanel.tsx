@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import FadeIn from './FadeIn';
+import { API_BASE_URL } from '../config';
 
 export interface JobHistoryItem {
   id: string;
@@ -23,7 +24,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onClose }) => {
     setMetrics(null);
     setLoadingMetrics(true);
     try {
-      const response = await fetch(`http://127.0.0.1:8000/metrics/${job.id}`);
+      const response = await fetch(`${API_BASE_URL}/metrics/${job.id}`);
       if (response.ok) {
         const data = await response.json();
         setMetrics(data);
@@ -177,9 +178,18 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({ history, onClose }) => {
                             </div>
 
                             <div className="mt-8 pt-6 border-t border-white/10">
-                              <button className="w-full bg-white text-black font-medium px-6 py-3 rounded-xl transition-colors hover:bg-gray-200 shadow-md">
+                              <a
+                                href={`${API_BASE_URL}/download/${selectedJob.id}`}
+                                download={`clearvision_${selectedJob.id}.tif`}
+                                className="w-full bg-white text-black font-medium px-6 py-3 rounded-xl transition-colors hover:bg-gray-200 shadow-md flex items-center justify-center gap-2"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                  <polyline points="7 10 12 15 17 10"></polyline>
+                                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                                </svg>
                                 Download Cleaned Image
-                              </button>
+                              </a>
                             </div>
                           </div>
                         ) : (

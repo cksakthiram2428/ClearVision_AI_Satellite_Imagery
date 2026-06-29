@@ -1,4 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { API_BASE_URL } from '../config';
 
 interface UploadPanelProps {
   onClose: () => void;
@@ -13,19 +14,18 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ onClose, onUploadSuccess }) =
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  // Handle escape key
+  const handleClose = useCallback(() => {
+    setIsClosing(true);
+    setTimeout(onClose, 300);
+  }, [onClose]);
+
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleClose();
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, []);
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(onClose, 300);
-  };
+  }, [handleClose]);
 
   const toggleTag = (tag: string) => {
     setSelectedTags(prev =>
@@ -41,21 +41,36 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ onClose, onUploadSuccess }) =
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Client-side file type validation
+    const validExtensions = ['.tif', '.tiff'];
+    const fileExt = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+    if (!validExtensions.includes(fileExt)) {
+      alert(`Invalid file type "${fileExt}". Only GeoTIFF files (.tif, .tiff) are supported.`);
+      // Reset the input
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/upload', {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
         method: 'POST',
         body: formData,
       });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ detail: 'Server error' }));
+        throw new Error(err.detail || `Server returned ${response.status}`);
+      }
       const data = await response.json();
       onUploadSuccess(data.job_id, selectedTags, file.name);
       handleClose();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Upload failed", error);
-      alert("Upload failed. Check if backend is running and CORS is enabled.");
+      const message = error instanceof Error ? error.message : 'Check if backend is running.';
+      alert(`Upload failed: ${message}`);
     } finally {
       setUploading(false);
     }
@@ -88,14 +103,14 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ onClose, onUploadSuccess }) =
           <div>
             <h3 className="text-sm font-medium text-white mb-3">1. Select Terrain Tags</h3>
             <p className="text-xs text-gray-400 mb-4">Adding tags helps us track and evaluate the model's performance on different geographical features.</p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               {AVAILABLE_TAGS.map(tag => (
                 <button
                   key={tag}
                   onClick={() => toggleTag(tag)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${selectedTags.includes(tag)
-                    ? 'bg-white text-black border-white shadow-sm'
-                    : 'bg-white/5 text-gray-300 border-white/20 hover:border-white/40 hover:bg-white/10'
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-all sm:px-4 sm:py-2 sm:text-sm ${selectedTags.includes(tag)
+                    ? 'border-white bg-white text-black shadow-sm'
+                    : 'border-white/20 bg-white/5 text-gray-300 hover:border-white/40 hover:bg-white/10'
                     }`}
                 >
                   {tag}
@@ -134,7 +149,7 @@ const UploadPanel: React.FC<UploadPanelProps> = ({ onClose, onUploadSuccess }) =
                 <>
                   <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mb-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                   <p className="text-sm font-medium text-white mb-1">Click to browse files</p>
-                  <p className="text-xs text-gray-400">Supports .tif and .tiff up to 100MB</p>
+                  <p className="text-xs text-gray-400">Supports .tif and .tiff up to 50MB</p>
                 </>
               )}
             </div>
