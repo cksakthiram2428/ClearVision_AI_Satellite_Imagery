@@ -74,7 +74,7 @@ const DocsPanel: React.FC<DocsPanelProps> = ({ onClose }) => {
           {/* Title */}
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-white leading-tight mb-2">
-              Generative AI-Based Cloud Removal for LISS-IV Satellite Imagery
+              Generative AI-Based Cloud Removal & Reconstruction for LISS-IV Satellite Imagery
             </h1>
             <div className="h-0.5 w-16 bg-gradient-to-r from-white/60 to-transparent rounded-full mt-4" />
           </div>

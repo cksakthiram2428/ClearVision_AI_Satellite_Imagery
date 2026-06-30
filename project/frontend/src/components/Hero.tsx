@@ -7,7 +7,7 @@ import DocsPanel from './DocsPanel';
 import ProfilePanel from './ProfilePanel';
 import { useAuth } from '../context/AuthContext';
 
-interface HeroProps {}
+interface HeroProps { }
 
 function loadJobHistory(): JobHistoryItem[] {
   const saved = localStorage.getItem('isro_job_history');
@@ -88,12 +88,12 @@ const Hero: React.FC<HeroProps> = () => {
             <nav className="liquid-glass rounded-xl px-4 py-2 flex items-center justify-between gap-3">
 
               {/* Brand */}
-              <div className="text-lg sm:text-xl md:text-2xl font-semibold tracking-tight shrink-0">ClearVision AI</div>
+              <div className="text-lg sm:text-xl md:text-2xl font-semibold tracking-tight shrink-0">PixelOrbit AI</div>
 
               {/* Desktop nav links */}
               <div className="hidden md:flex items-center gap-6 lg:gap-8 text-sm flex-1 justify-center">
-                <a href="#features" className="transition-colors hover:text-gray-300 whitespace-nowrap">Features</a>
-                <a href="#technology" className="transition-colors hover:text-gray-300 whitespace-nowrap">Technology</a>
+                <a href="#features" className="transition-colors hover:text-gray-300 whitespace-nowrap">Home</a>
+                <a href="#technology" className="transition-colors hover:text-gray-300 whitespace-nowrap">Dashboard</a>
                 <a href="#about" className="transition-colors hover:text-gray-300 whitespace-nowrap">About Model</a>
                 <button
                   id="nav-history-btn"
@@ -217,14 +217,14 @@ const Hero: React.FC<HeroProps> = () => {
               {/* Left Column */}
               <div className="pointer-events-auto">
                 <AnimatedHeading
-                  text={"Generative AI-Based\nCloud Removal for \nLISS–IV Satellite\nImagery"}
+                  text={"Generative AI-Based\nCloud Removal &\nReconstruction\nfor LISS–IV Satellite\nImagery"}
                   className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-normal mb-4"
                   style={{ letterSpacing: '-0.04em' }}
                 />
 
                 <FadeIn delay={800} duration={1000}>
-                  <p className="text-sm sm:text-base md:text-lg text-gray-300 mb-8 sm:mb-10 max-w-xl">
-                    Restore LISS-IV GeoTIFF images by removing cloud cover using our advanced ML model.
+                  <p className="text-sm sm:text-base md:text-lg text-gray-300 mb-8 sm:mb-10 max-w-xl">Upload LISS-IV images, remove clouds with Generative AI,
+                    and download cloud-free results
                   </p>
                 </FadeIn>
 
@@ -241,7 +241,7 @@ const Hero: React.FC<HeroProps> = () => {
                           <polyline points="17 8 12 3 7 8" />
                           <line x1="12" y1="3" x2="12" y2="15" />
                         </svg>
-                        New Process
+                        Upload LISS-IV Image
                       </button>
 
                       <button
@@ -249,7 +249,7 @@ const Hero: React.FC<HeroProps> = () => {
                         onClick={() => setShowHistory(true)}
                         className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/30 text-white px-6 sm:px-8 py-3 rounded-lg text-sm sm:text-base font-medium transition-all active:scale-95 shadow-lg shadow-black/50 min-h-[48px]"
                       >
-                        Process History
+                        View Results
                       </button>
                     </div>
 
