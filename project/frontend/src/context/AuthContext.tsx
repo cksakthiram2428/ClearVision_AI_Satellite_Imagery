@@ -45,7 +45,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setAccessToken(token);
     setIsAuthenticated(true);
     const resolvedEmail = email ?? 'admin@clearvision.ai';
-    const resolvedName = resolvedEmail.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const [localPart, domainPart] = resolvedEmail.split('@');
+    const domainName = (domainPart ?? '').split('.')[0];
+    const resolvedName = `${localPart} ${domainName}`
+      .replace(/[._-]/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim();
     setUserEmail(resolvedEmail);
     setUserName(resolvedName);
     window.localStorage.setItem('clearvision-auth', 'true');

@@ -22,6 +22,7 @@ const LoginPage = () => {
   const [createConfirmPassword, setCreateConfirmPassword] = useState('');
   const [createError, setCreateError] = useState('');
   const [accountCreated, setAccountCreated] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
 
   useEffect(() => {
     emailRef.current?.focus();
@@ -113,13 +114,19 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen overflow-hidden bg-black text-white relative">
+      {/* Skeleton pulse while video streams */}
+      {!videoReady && (
+        <div className="absolute inset-0 z-0 bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 animate-pulse" />
+      )}
+
       {/* Animated video background — same as Hero */}
       <video
         autoPlay
         loop
         muted
         playsInline
-        className="absolute inset-0 w-full h-full object-cover z-0"
+        onCanPlay={() => setVideoReady(true)}
+        className={`absolute inset-0 w-full h-full object-cover z-0 transition-opacity duration-700 ${videoReady ? 'opacity-100' : 'opacity-0'}`}
       >
         <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260403_050628_c4e32401-fab4-4a27-b7a8-6e9291cd5959.mp4" type="video/mp4" />
       </video>

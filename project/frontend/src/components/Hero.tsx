@@ -22,6 +22,7 @@ function loadJobHistory(): JobHistoryItem[] {
 
 const Hero: React.FC<HeroProps> = () => {
   const { userName, userEmail } = useAuth();
+  const [videoReady, setVideoReady] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
 
   // Panels state
@@ -62,13 +63,19 @@ const Hero: React.FC<HeroProps> = () => {
     <>
       {/* Main content — blurs when any panel is open */}
       <div className={`relative w-full text-white font-sans transition-all duration-300 ${isAnyPanelOpen ? 'blur-md pointer-events-none' : ''}`}>
+        {/* Video skeleton — shown while video is loading */}
+        {!videoReady && (
+          <div className="fixed inset-0 z-0 bg-gradient-to-br from-gray-950 via-slate-900 to-gray-950 animate-pulse" />
+        )}
+
         {/* Background Video */}
         <video
           autoPlay
           loop
           muted
           playsInline
-          className="fixed inset-0 w-full h-full object-cover z-0"
+          onCanPlay={() => setVideoReady(true)}
+          className={`fixed inset-0 w-full h-full object-cover z-0 transition-opacity duration-700 ${videoReady ? 'opacity-100' : 'opacity-0'}`}
         >
           <source src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260403_050628_c4e32401-fab4-4a27-b7a8-6e9291cd5959.mp4" type="video/mp4" />
         </video>
@@ -324,6 +331,97 @@ const Hero: React.FC<HeroProps> = () => {
             </div>
           </section>
 
+          {/* Technology Section */}
+          <section id="technology" className="py-16 sm:py-24 px-4 sm:px-6 md:px-12 lg:px-16 border-t border-white/10">
+            <div className="max-w-7xl mx-auto">
+              <div className="mb-10 sm:mb-16">
+                <h2 className="text-2xl sm:text-3xl md:text-5xl font-light mb-3 sm:mb-4">Technology Stack</h2>
+                <p className="text-gray-400 max-w-2xl text-sm sm:text-base md:text-lg leading-relaxed">
+                  Built on battle-tested open-source tools, designed for both research flexibility and production reliability.
+                </p>
+              </div>
+
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+                {[
+                  {
+                    label: 'ML Framework',
+                    name: 'PyTorch',
+                    desc: 'Custom GAN training with distributed GPU support and dynamic computation graphs.',
+                    color: 'from-orange-500/20 to-red-500/10',
+                    border: 'border-orange-500/20',
+                    icon: '🔥',
+                  },
+                  {
+                    label: 'API Backend',
+                    name: 'FastAPI',
+                    desc: 'Async Python REST API with OpenAPI docs, rate-limiting, and SQLite persistence.',
+                    color: 'from-teal-500/20 to-cyan-500/10',
+                    border: 'border-teal-500/20',
+                    icon: '⚡',
+                  },
+                  {
+                    label: 'Geospatial I/O',
+                    name: 'Rasterio + GDAL',
+                    desc: 'Native GeoTIFF read/write with full projection and metadata preservation.',
+                    color: 'from-emerald-500/20 to-green-500/10',
+                    border: 'border-emerald-500/20',
+                    icon: '🛰️',
+                  },
+                  {
+                    label: 'Frontend',
+                    name: 'React + Vite',
+                    desc: 'TypeScript-first UI with Tailwind CSS, Framer Motion animations, and HMR dev server.',
+                    color: 'from-blue-500/20 to-indigo-500/10',
+                    border: 'border-blue-500/20',
+                    icon: '⚛️',
+                  },
+                ].map(({ label, name, desc, color, border, icon }) => (
+                  <div
+                    key={name}
+                    className={`bg-gradient-to-br ${color} border ${border} rounded-2xl p-5 sm:p-6 hover:brightness-110 transition-all`}
+                  >
+                    <div className="text-3xl mb-3">{icon}</div>
+                    <p className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-1">{label}</p>
+                    <h3 className="text-base sm:text-lg font-semibold mb-2">{name}</h3>
+                    <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">{desc}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Pipeline steps */}
+              <div className="mt-14 sm:mt-20">
+                <h3 className="text-lg sm:text-2xl font-light mb-8 text-gray-300">Processing Pipeline</h3>
+                <div className="flex flex-col sm:flex-row gap-0">
+                  {[
+                    { step: '01', title: 'Upload', desc: 'GeoTIFF ingested and validated' },
+                    { step: '02', title: 'Cloud Mask', desc: 'Automatic cloud region detection' },
+                    { step: '03', title: 'Inference', desc: 'GAN reconstructs cloud-free pixels' },
+                    { step: '04', title: 'Evaluate', desc: 'PSNR · SSIM · SAM metrics computed' },
+                    { step: '05', title: 'Download', desc: 'Cloud-free GeoTIFF ready to export' },
+                  ].map(({ step, title, desc }, idx, arr) => (
+                    <div key={step} className="flex sm:flex-col flex-1 items-start sm:items-center gap-3 sm:gap-0 relative">
+                      <div className="flex items-center sm:flex-col sm:items-center w-full sm:mb-4">
+                        <div className="w-10 h-10 rounded-full border border-cyan-400/40 bg-cyan-400/10 flex items-center justify-center text-cyan-300 text-xs font-mono font-bold shrink-0">
+                          {step}
+                        </div>
+                        {idx < arr.length - 1 && (
+                          <div className="flex-1 sm:hidden h-px bg-white/10 mx-3" />
+                        )}
+                        {idx < arr.length - 1 && (
+                          <div className="hidden sm:block absolute top-5 left-[calc(50%+20px)] right-0 h-px bg-white/10" />
+                        )}
+                      </div>
+                      <div className="sm:text-center pb-6 sm:pb-0">
+                        <p className="text-sm font-semibold">{title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
           {/* About Section */}
           <section id="about" className="py-16 sm:py-24 px-4 sm:px-6 md:px-12 lg:px-16 border-t border-white/10">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-10 md:gap-16 items-center">
@@ -342,8 +440,14 @@ const Hero: React.FC<HeroProps> = () => {
                   </button>
                 </div>
               </div>
-              <div className="flex-1 w-full bg-white/5 border border-white/10 rounded-3xl aspect-square flex items-center justify-center p-6 sm:p-8 overflow-hidden">
-                <img src="/model-architecture.png" alt="Model Architecture" className="w-full h-full object-contain drop-shadow-2xl" />
+              {/* GAN diagram — mix-blend-mode:screen dissolves the black background into the dark glass container */}
+              <div className="flex-1 w-full bg-transparent border border-white/10 rounded-3xl aspect-square flex items-center justify-center p-4 sm:p-6 overflow-hidden" style={{ background: 'rgba(15,20,35,0.6)' }}>
+                <img
+                  src="/model-architecture.png"
+                  alt="Model Architecture"
+                  className="w-full h-full object-contain drop-shadow-2xl"
+                  style={{ mixBlendMode: 'screen' }}
+                />
               </div>
             </div>
           </section>
